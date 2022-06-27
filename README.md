@@ -1,5 +1,6 @@
 # Piano RGB v2
-Script that reads the Piano MIDI and light the LED RGB Strip according to the notes being played.
+Service that reads the Piano MIDI and light the LED RGB Strip according to the notes being played.
+Also with integrated API for interaction from a website or mobile app.
 
 ## Installing dependencies
 
