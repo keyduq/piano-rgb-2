@@ -8,6 +8,9 @@ import { ReadlineParser, SerialPort } from 'serialport';
 import { setTimeout } from 'timers/promises';
 import Color from 'color';
 
+/**
+ * Service that control the piano midi and serial port
+ */
 @Injectable()
 export class PianoService {
   private logger = new Logger(PianoService.name);
@@ -34,13 +37,19 @@ export class PianoService {
     this.initDatabase();
   }
   
+  /**
+   * Initialize a file database located in /db/db.json
+   */
   private async initDatabase() {
     const path = join(process.cwd(), 'db', 'db.json');
     const adapter = new JSONFile<DB>(path);
     this.db = new Low<DB>(adapter);
     await this.db.read();
   }
-  
+  /**
+   * Get the current color range start
+   * @returns {number} Color range start number
+   */
   getColorRangeStart(): number {
     return this.db.data.config.colorRangeStart;
   }
@@ -60,7 +69,7 @@ export class PianoService {
     return this.db.write();
   }
   
-  checkMidi(): { available: boolean, casioPort: number, loopmidiPort: number} {
+  checkMidi(): { available: boolean, casioPort: number, loopmidiPort: number } {
     const casio = this.getPort(this.input, 'CASIO');
     const loopmidi = this.getPort(this.output, 'loopmidi');
     return {

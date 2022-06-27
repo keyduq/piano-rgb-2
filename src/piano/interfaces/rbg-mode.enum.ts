@@ -1,4 +1,4 @@
 export enum RgbMode {
-  spectrum,
-  colorRange,
+  spectrum = 'spectrum',
+  colorRange = 'colorRange',
 }
