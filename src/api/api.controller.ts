@@ -1,10 +1,16 @@
 import { Body, Controller, Get, Put } from '@nestjs/common';
+import { RgbMode } from '../piano/interfaces/rbg-mode.enum.js';
 import { PianoService } from '../piano/piano.service.js';
 import { ConfigDto } from './dtos/config.dto.js';
 
 @Controller('api')
 export class ApiController {
   constructor(private readonly pianoService: PianoService) {}
+  
+  @Get('/modes')
+  async getColorModes(): Promise<string[]> {
+    return Object.values(RgbMode);
+  }
 
   @Get('/config')
   async getConfig(): Promise<ConfigDto> {
