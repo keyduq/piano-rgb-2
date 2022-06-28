@@ -16,9 +16,11 @@ export class ApiController {
   async getConfig(): Promise<ConfigDto> {
     const rgbMode = this.pianoService.getRgbMode();
     const colorRangeStart = this.pianoService.getColorRangeStart();
+    const fixedHue = this.pianoService.getFixedHue();
     return {
       rgbMode,
       colorRangeStart,
+      fixedHue,
     }
   }
   
@@ -26,6 +28,7 @@ export class ApiController {
   async putConfig(@Body() body: ConfigDto): Promise<{ success: boolean, data: ConfigDto }> {
     await this.pianoService.setRgbMode(body.rgbMode);
     await this.pianoService.setColorRangeStart(body.colorRangeStart);
+    await this.pianoService.setFixedHue(body.fixedHue);
     return {
       success: true,
       data: body,

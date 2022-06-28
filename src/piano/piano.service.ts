@@ -1,10 +1,10 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { JSONFile, Low } from 'lowdb';
 import midi from 'midi';
-import { join, dirname, resolve } from 'path';
+import { join } from 'path';
 import { DB } from './interfaces/db.interface.js';
 import { RgbMode } from './interfaces/rbg-mode.enum.js';
-import { ReadlineParser, SerialPort } from 'serialport';
+import { SerialPort } from 'serialport';
 import { setTimeout } from 'timers/promises';
 import Color from 'color';
 
@@ -15,10 +15,11 @@ import Color from 'color';
 export class PianoService {
   private logger = new Logger(PianoService.name);
   private db: Low<DB>;
-  private input: midi.Input;
+  private input: midi.Input
   private output: midi.Output;
   private isOff: boolean;
   private serialPort: SerialPort;
+  private lastColorSent: Color;
 
   constructor() {
     this.serialPort = new SerialPort({
@@ -69,6 +70,15 @@ export class PianoService {
     return this.db.write();
   }
   
+  getFixedHue(): number {
+    return this.db.data.config.fixedHue;
+  }
+  
+  async setFixedHue(fixedHue: number): Promise<void> {
+    this.db.data.config.fixedHue = fixedHue;
+    return this.db.write();
+  }
+  
   checkMidi(): { available: boolean, casioPort: number, loopmidiPort: number } {
     const casio = this.getPort(this.input, 'CASIO');
     const loopmidi = this.getPort(this.output, 'loopmidi');
@@ -109,10 +119,20 @@ export class PianoService {
       this.output.sendMessage(msg);
       if (msg[0] == 144) { 
         const key = msg[1] - 21;
-        if (rgbMode == RgbMode.colorRange) {
-          hue = (this.getColorRangeStart() + key / 1.25);
-        } else {
-          hue = key / 88 * 360;
+        switch(rgbMode) {
+          case RgbMode.colorRange:
+            hue = (this.getColorRangeStart() + key / 1.25);
+          break;
+          case RgbMode.fixedColor:
+            hue = this.getFixedHue();
+          break;
+          case RgbMode.spectrum:
+          default:
+            hue = key / 88 * 360;
+        }
+        if (this.lastColorSent?.hue() == hue) {
+          // dont need to change color
+          return;
         }
         const color = Color.hsl([hue, 100, 50]);
         this.sendColor(color);
@@ -134,6 +154,7 @@ export class PianoService {
   
   sendColor(color: Color) {
     const data = `${color.red().toFixed()},${color.green().toFixed()},${color.blue().toFixed()}\n`;
+    this.lastColorSent = color;
     this.serialPort.write(data, err => {
       if (err) {
         this.logger.error(err);
