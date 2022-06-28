@@ -76,7 +76,9 @@ export class PianoService {
   
   async setFixedHue(fixedHue: number): Promise<void> {
     this.db.data.config.fixedHue = fixedHue;
-    return this.db.write();
+    this.db.write();
+    const color = Color.hsl([fixedHue, 100, 50]);
+    this.sendColor(color);
   }
   
   checkMidi(): { available: boolean, casioPort: number, loopmidiPort: number } {
@@ -115,24 +117,21 @@ export class PianoService {
     this.isOff = false;
     this.input.on('message', (_, msg) => {
       const rgbMode = this.getRgbMode();
-      let hue: number;
       this.output.sendMessage(msg);
+      if (rgbMode == RgbMode.fixedColor) {
+        // fixed color
+        return;
+      }
+      let hue: number;
       if (msg[0] == 144) { 
         const key = msg[1] - 21;
         switch(rgbMode) {
           case RgbMode.colorRange:
             hue = (this.getColorRangeStart() + key / 1.25);
           break;
-          case RgbMode.fixedColor:
-            hue = this.getFixedHue();
-          break;
           case RgbMode.spectrum:
           default:
             hue = key / 88 * 360;
-        }
-        if (this.lastColorSent?.hue() == hue) {
-          // dont need to change color
-          return;
         }
         const color = Color.hsl([hue, 100, 50]);
         this.sendColor(color);

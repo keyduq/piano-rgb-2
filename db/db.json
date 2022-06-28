@@ -2,6 +2,6 @@
   "config": {
     "rgbMode": "fixedColor",
     "colorRangeStart": 80,
-    "fixedHue": 250
+    "fixedHue": 200
   }
 }
