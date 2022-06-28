@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Put } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, Put } from '@nestjs/common';
 import { RgbMode } from '../piano/interfaces/rbg-mode.enum.js';
 import { PianoService } from '../piano/piano.service.js';
 import { ConfigDto } from './dtos/config.dto.js';
@@ -26,6 +26,9 @@ export class ApiController {
   
   @Put('/config')
   async putConfig(@Body() body: ConfigDto): Promise<{ success: boolean, data: ConfigDto }> {
+    if (body.rgbMode == undefined || body.colorRangeStart == undefined || body.fixedHue == undefined) {
+      throw new BadRequestException('Check all the properties');
+    }
     await this.pianoService.setRgbMode(body.rgbMode);
     await this.pianoService.setColorRangeStart(body.colorRangeStart);
     await this.pianoService.setFixedHue(body.fixedHue);
