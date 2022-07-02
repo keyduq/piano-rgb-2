@@ -7,6 +7,7 @@ import { RgbMode } from './interfaces/rbg-mode.enum.js';
 import { SerialPort } from 'serialport';
 import { setTimeout } from 'timers/promises';
 import Color from 'color';
+import { Config } from './interfaces/config.interface.js';
 
 /**
  * Service that control the piano midi and serial port
@@ -19,7 +20,6 @@ export class PianoService {
   private output: midi.Output;
   private isOff: boolean;
   private serialPort: SerialPort;
-  private lastColorSent: Color;
 
   constructor() {
     this.serialPort = new SerialPort({
@@ -47,31 +47,14 @@ export class PianoService {
     this.db = new Low<DB>(adapter);
     await this.db.read();
   }
-  /**
-   * Get the current color range start
-   * @returns {number} Color range start number
-   */
-  getColorRangeStart(): number {
-    return this.db.data.config.colorRangeStart;
-  }
   
-  async setColorRangeStart(rangeStart: number): Promise<void> {
-    this.db.data.config.colorRangeStart = rangeStart;
+  async setConfig(config: Config): Promise<void> {
+    this.db.data.config = config;
     return this.db.write();
   }
   
-  getRgbMode(): RgbMode {
-    const rgbMode = this.db.data.config.rgbMode;
-    return RgbMode[rgbMode];
-  }
-  
-  async setRgbMode(rgbMode: RgbMode): Promise<void> {
-    this.db.data.config.rgbMode = RgbMode[rgbMode];
-    return this.db.write();
-  }
-  
-  getFixedHue(): number {
-    return this.db.data.config.fixedHue;
+  getConfig(): Config {
+    return this.db.data.config;
   }
   
   async setFixedHue(fixedHue: number): Promise<void> {
@@ -118,7 +101,9 @@ export class PianoService {
     }
     this.isOff = false;
     this.input.on('message', (_, msg) => {
-      const rgbMode = this.getRgbMode();
+      const config = this.getConfig();
+      const rgbMode = config.rgbMode;
+      const pianoSize = 88;
       this.output.sendMessage(msg);
       if (rgbMode == RgbMode.fixedColor) {
         // fixed color
@@ -126,14 +111,15 @@ export class PianoService {
       }
       let hue: number;
       if (msg[0] == 144) { 
-        const key = msg[1] - 21;
+        const key = msg[1] - 21; // for a 88 keys piano, start from 0
         switch(rgbMode) {
           case RgbMode.colorRange:
-            hue = (this.getColorRangeStart() + key / 1.25);
+            const scaleKey = key * (config.colorRangeEnd - config.colorRangeStart) / pianoSize;
+            hue = scaleKey + config.colorRangeStart;
           break;
           case RgbMode.spectrum:
           default:
-            hue = key / 88 * 360;
+            hue = key / pianoSize * 360;
         }
         const color = Color.hsl([hue, 100, 50]);
         this.sendColor(color);
@@ -155,7 +141,6 @@ export class PianoService {
   
   sendColor(color: Color) {
     const data = `${color.red().toFixed()},${color.green().toFixed()},${color.blue().toFixed()}\n`;
-    this.lastColorSent = color;
     this.serialPort.write(data, err => {
       if (err) {
         this.logger.error(err);
